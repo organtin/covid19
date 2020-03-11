@@ -35,8 +35,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 url = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv'
 
 # comment the following line to avoid downloading the file from the Internet
-#filename = wget.download(url)
-# comment to download the file from the Internet
+filename = wget.download(url)
 filename = 'time_series_19-covid-Confirmed.csv'
 
 # The model function
@@ -122,17 +121,18 @@ def myplotfit(plt, x, y, p0, p1, s0, s1, legendPosition=0, legend=None):
 
 # Create a plot and show data with the model superimposed
 plt.figure(figsize=(12,7))
-myplotfit(plt, head, Nill, A, tau, dA, dtau, 0, 'Fit last 10 points')
+myplotfit(plt, head, Nill, A, tau, dA, dtau, .9, 'Fit last 10 points')
 plt.show()
 
 # Fit a portion of the data iteratively
+intervalAmplitude = 3
 xmax = len(head) - 1
-xmin = xmax - 4
+xmin = xmax - intervalAmplitude
 plt.figure(figsize=(12,7))
 plt.title(country)
 legendPos = 0.9
 taudata = [0]*len(head)
-while xmin > 0:
+while xmin >= 0:
     # Fit the given portion of data
     A, tau, dA, dtau = fit(Nill, xmin, xmax)
     taudata[xmin] = tau
@@ -141,8 +141,8 @@ while xmin > 0:
     # Add the model to the plot
     label = 'Fit from ' + str(xmin) + ' to ' + str(xmax) + ': $\\tau = {:.2f}$ d'.format(tau) 
     myplotfit(plt, head, Nill, A, tau, dA, dtau, legendPos, label)
-    xmax -= 4
-    xmin = xmax - 4
+    xmax -= intervalAmplitude
+    xmin = xmax - intervalAmplitude
     legendPos -= 0.1
 
 # Show the plot with the various models superimposed
@@ -155,4 +155,17 @@ plt.plot(head, taudata, 'o')
 plt.ylim(bottom = 0.1)
 plt.xticks(rotation=45)
 plt.ylabel('Characteristic time [d]')
+plt.show()
+
+# make a plot of the derivative of log(N(t))
+deriv = []
+i = 0
+for i in range(len(lNill) - 1):
+    deriv.append(lNill[i + 1]-lNill[i])
+    i += 1
+plt.figure(figsize=(12,7))
+plt.title('Evolution of the characteristic time of coronavirus spread')
+plt.plot(head[:-1], deriv, '-o')
+plt.ylabel('$\\frac{d\\tau}{dt}$')
+plt.xticks(rotation=45)
 plt.show()
