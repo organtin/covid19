@@ -44,10 +44,13 @@ country = 'Italy'
 
 # help function
 def covidhelp():
-    print('Usage: {} [source]'.format(sys.argv[0]))
+    print('Usage: {} [source] [min]'.format(sys.argv[0]))
     print('       [source] is optional and can be either "Italy" or "World/<country>"')
     print('       where <country> is the name of the country in which you are')
     print('       interested in (e.g. "World/China" or "World/Norway")')
+    print('       [min] identifies the starting point of the plot. Data are considered only')
+    print('       starting from the date at which the number of infected begins to be ')
+    print('       higher than [min] (default to 4)')
 
 # get arguments, if any
 if (len(sys.argv) > 1):
