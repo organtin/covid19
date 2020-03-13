@@ -28,14 +28,39 @@ import wget
 import ssl
 import sys
 import os
+import re
 
 # You can download the data from the following URL. Data are expected to be organised as
 # in the given CSV file. 
 
 ssl._create_default_https_context = ssl._create_unverified_context
-#url = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv'
-url = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
+urls = {
+    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
+    'Italy' : 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
+    }
 
+url = urls['Italy']
+country = 'Italy'
+
+# help function
+def covidhelp():
+    print('Usage: {} [source]'.format(sys.argv[0]))
+    print('       [source] is optional and can be either "Italy" or "World/<country>"')
+    print('       where <country> is the name of the country in which you are')
+    print('       interested in (e.g. "World/China" or "World/Norway")')
+
+# get arguments, if any
+if (len(sys.argv) > 1):
+    if sys.argv[1] != 'Italy':
+        if re.match('^World', sys.argv[1]):
+            url = urls['World']
+            country = sys.argv[1].split("/")[1]
+        else:
+            covidhelp()
+            exit(0)
+
+# download data
+print('Getting data from {} for {}'.format(url.rstrip(), country))
 filename = wget.download(url)
 
 # The model function
@@ -53,7 +78,6 @@ def myplot(x, y, ylabel, fname='output.png', title=None):
     plt.show()
 
 # Open the data file and read it
-print('Reading data from {}'.format(filename))
 f = open(filename, 'r')
 
 w = pd.read_csv(filename)
@@ -69,10 +93,9 @@ else:
     i = 0;
 
     # Select only data belonging to a given country as specified in column 1
-    country = sys.argv[1]
     while data[i][1] != country:
         i += 1
-        Nill = data[i][4:]
+    Nill = data[i][4:]
 
 # Use only data with Nill > threshold. By default the threshold is 4
 i = 0
@@ -134,7 +157,7 @@ myplotfit(plt, head, Nill, A, tau, dA, dtau, .9, 'Fit last 10 points')
 plt.show()
 
 # Fit a portion of the data iteratively
-intervalAmplitude = 4
+intervalAmplitude = 6
 xmax = len(head) - 1
 xmin = xmax - intervalAmplitude
 plt.figure(figsize=(12,7))
