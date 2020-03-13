@@ -126,7 +126,7 @@ myplotfit(plt, head, Nill, A, tau, dA, dtau, .9, 'Fit last 10 points')
 plt.show()
 
 # Fit a portion of the data iteratively
-intervalAmplitude = 5
+intervalAmplitude = 6
 xmax = len(head) - 1
 xmin = xmax - intervalAmplitude
 plt.figure(figsize=(12,7))
@@ -194,10 +194,13 @@ A = 1/p[3]
 dA = np.sqrt(cov[3][3])/(p[3]**2)
 tr = 1/p[1]
 dTr = np.sqrt(cov[1][1])/(p[1]**2)
-print('Time t0      : {:.2f} +- {:.2f}'.format(t0, dt0))
-print('Current level: {:.2f} +- {:.2f}'.format(A, dA))
-print('Rise time    : {:.2f} +- {:.2f}'.format(tr, dTr))
-print('Current time : {}'.format(max(xr)))
+print('Time t0        : {:.2f} +- {:.2f}'.format(t0, dt0))
+print('Current level  : {:.2f} +- {:.2f}'.format(A, dA))
+print('Rise time      : {:.2f} +- {:.2f}'.format(tr, dTr))
+print('Current time   : {}'.format(max(xr)))
+ttp = t0+3*tr-max(xr)
+print('Time to plateau: {} (estimate)'.format(ttp))
+plt.annotate('Time to plateau: {:.0f} d'.format(ttp), (0.1, 0.9), xycoords='axes fraction')
 plt.savefig('logisticfit.png')
 plt.show()
 
