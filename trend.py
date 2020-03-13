@@ -35,7 +35,7 @@ ssl._create_default_https_context = ssl._create_unverified_context
 url = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv'
 
 # comment the following line to avoid downloading the file from the Internet
-filename = wget.download(url)
+#filename = wget.download(url)
 filename = 'time_series_19-covid-Confirmed.csv'
 
 # The model function
@@ -43,11 +43,12 @@ def fun(x, a, b):
     return a*np.exp(x/b)
 
 # A function to make nice plots
-def myplot(x, y, ylabel, fname='output.png'):
+def myplot(x, y, ylabel, fname='output.png', title=None):
     plt.figure(figsize=(12,7))
     plt.plot(x, y, 'o')
     plt.xticks(rotation=45)
     plt.ylabel(ylabel)
+    plt.title(title)
     plt.savefig(fname)
     plt.show()
 
@@ -81,8 +82,8 @@ head  = head[i:]
 lNill = [np.log(x) for x in Nill]
 
 # Do plots of data and their logarithm vs time
-myplot(head, Nill, 'N', 'NvsT.png')
-myplot(head, lNill, 'log(N)', 'logNvsT.png')
+myplot(head, Nill, 'N', 'NvsT.png', country)
+myplot(head, lNill, 'log(N)', 'logNvsT.png', country)
 
 # A function to perform a fit
 def fit(y, n, m=-1):
@@ -125,7 +126,7 @@ myplotfit(plt, head, Nill, A, tau, dA, dtau, .9, 'Fit last 10 points')
 plt.show()
 
 # Fit a portion of the data iteratively
-intervalAmplitude = 3
+intervalAmplitude = 5
 xmax = len(head) - 1
 xmin = xmax - intervalAmplitude
 plt.figure(figsize=(12,7))
@@ -168,4 +169,35 @@ plt.title('Evolution of the characteristic time of coronavirus spread')
 plt.plot(head[:-1], deriv, '-o')
 plt.ylabel('$\\frac{d\\tau}{dt}$')
 plt.xticks(rotation=45)
+plt.savefig('dtaudt.png')
 plt.show()
+
+# a logistic model
+def flog(x, A, b, t0, C):
+    return C + A/(1+np.exp(b*(x-t0)))
+
+# normalise data
+NillNorm = [x/max(Nill) for x in Nill]
+xr = range(len(NillNorm))
+p, cov = curve_fit(flog, xr, NillNorm, sigma=np.sqrt(NillNorm))
+xr2 = range(2*len(NillNorm))
+plt.figure(figsize=(12,7))
+plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
+plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-')
+plt.plot(xr, NillNorm, 'o')
+plt.xlabel('t [d]')
+plt.ylabel('N')
+print(p)
+t0 = p[2]
+dt0 = np.sqrt(cov[2][2])
+A = 1/p[3]
+dA = np.sqrt(cov[3][3])/(p[3]**2)
+tr = 1/p[1]
+dTr = np.sqrt(cov[1][1])/(p[1]**2)
+print('Time t0      : {:.2f} +- {:.2f}'.format(t0, dt0))
+print('Current level: {:.2f} +- {:.2f}'.format(A, dA))
+print('Rise time    : {:.2f} +- {:.2f}'.format(tr, dTr))
+print('Current time : {}'.format(max(xr)))
+plt.savefig('logisticfit.png')
+plt.show()
+
