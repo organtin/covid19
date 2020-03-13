@@ -60,8 +60,6 @@ w = pd.read_csv(filename)
 os.remove(filename)
 if filename == 'dpc-covid19-ita-andamento-nazionale.csv':
     data = w.T.values.tolist()
-    print(data[0])
-    print(data[10])
     head = [dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in data[0]]
     Nill = data[10]
     country = 'Italy'
@@ -136,7 +134,7 @@ myplotfit(plt, head, Nill, A, tau, dA, dtau, .9, 'Fit last 10 points')
 plt.show()
 
 # Fit a portion of the data iteratively
-intervalAmplitude = 6
+intervalAmplitude = 4
 xmax = len(head) - 1
 xmin = xmax - intervalAmplitude
 plt.figure(figsize=(12,7))
@@ -209,7 +207,7 @@ print('Current level  : {:.2f} +- {:.2f}'.format(A, dA))
 print('Rise time      : {:.2f} +- {:.2f}'.format(tr, dTr))
 print('Current time   : {}'.format(max(xr)))
 ttp = t0+3*tr-max(xr)
-print('Time to plateau: {} (estimate)'.format(ttp))
+print('Time to plateau: {:.0f} (estimate)'.format(ttp))
 plt.annotate('Time to plateau: {:.0f} d'.format(ttp), (0.1, 0.9), xycoords='axes fraction')
 plt.savefig('logisticfit.png')
 plt.show()
