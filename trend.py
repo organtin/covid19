@@ -27,16 +27,16 @@ from scipy.optimize import curve_fit
 import wget
 import ssl
 import sys
+import os
 
 # You can download the data from the following URL. Data are expected to be organised as
 # in the given CSV file. 
 
 ssl._create_default_https_context = ssl._create_unverified_context
-url = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv'
+#url = 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv'
+url = 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
 
-# comment the following line to avoid downloading the file from the Internet
-#filename = wget.download(url)
-filename = 'time_series_19-covid-Confirmed.csv'
+filename = wget.download(url)
 
 # The model function
 def fun(x, a, b):
@@ -53,18 +53,28 @@ def myplot(x, y, ylabel, fname='output.png', title=None):
     plt.show()
 
 # Open the data file and read it
+print('Reading data from {}'.format(filename))
 f = open(filename, 'r')
 
 w = pd.read_csv(filename)
-data = w.values.tolist()
-head = [dt.datetime.strptime(x, '%m/%d/%y') for x in w.columns[4:]]
-i = 0;
+os.remove(filename)
+if filename == 'dpc-covid19-ita-andamento-nazionale.csv':
+    data = w.T.values.tolist()
+    print(data[0])
+    print(data[10])
+    head = [dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in data[0]]
+    Nill = data[10]
+    country = 'Italy'
+else:
+    data = w.values.tolist()
+    head = [dt.datetime.strptime(x, '%m/%d/%y') for x in w.columns[4:]]
+    i = 0;
 
-# Select only data belonging to a given country as specified in column 1
-country = sys.argv[1]
-while data[i][1] != country:
-    i += 1
-Nill = data[i][4:]
+    # Select only data belonging to a given country as specified in column 1
+    country = sys.argv[1]
+    while data[i][1] != country:
+        i += 1
+        Nill = data[i][4:]
 
 # Use only data with Nill > threshold. By default the threshold is 4
 i = 0
