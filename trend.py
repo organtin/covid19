@@ -134,11 +134,12 @@ while (Nill[i] < min_val):
     i += 1
 
 Nill = Nill[i:]
-Ndeaths = Ndeaths[i:]
-Nrecovered = Nrecovered[i:]
-Nhospital = Nhospital[i:]
-Ncritical = Ncritical[i:]
 head  = head[i:]
+if (db != 'World'):
+    Ndeaths = Ndeaths[i:]
+    Nrecovered = Nrecovered[i:]
+    Nhospital = Nhospital[i:]
+    Ncritical = Ncritical[i:]
 
 # Compute the logarithm of the data
 lNill = [np.log(x) for x in Nill]
