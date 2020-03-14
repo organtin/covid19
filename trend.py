@@ -89,6 +89,10 @@ if filename == 'dpc-covid19-ita-andamento-nazionale.csv':
     data = w.T.values.tolist()
     head = [dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in data[0]]
     Nill = data[10]
+    Ndeaths = data[9]
+    Nrecovered = data[8]
+    Nhospital = data[4]
+    Ncritical = data[3]
     country = 'Italy'
 else:
     data = w.values.tolist()
@@ -210,17 +214,16 @@ plt.show()
 def flog(x, A, b, t0, C):
     return C + A/(1+np.exp(b*(x-t0)))
 
+# normalisation function
+def normalise(v):
+    return [x/max(v) for x in v]
+
 # normalise data
-NillNorm = [x/max(Nill) for x in Nill]
+NillNorm = normalise(Nill)
+
+# fit and plot normalised data
 xr = range(len(NillNorm))
 p, cov = curve_fit(flog, xr, NillNorm, sigma=np.sqrt(NillNorm))
-xr2 = range(2*len(NillNorm))
-plt.figure(figsize=(12,7))
-plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
-plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-')
-plt.plot(xr, NillNorm, 'o')
-plt.xlabel('t [d]')
-plt.ylabel('N')
 print(p)
 t0 = p[2]
 dt0 = np.sqrt(cov[2][2])
@@ -228,13 +231,40 @@ A = 1/p[3]
 dA = np.sqrt(cov[3][3])/(p[3]**2)
 tr = 1/p[1]
 dTr = np.sqrt(cov[1][1])/(p[1]**2)
+xr2 = range(2*int(np.ceil(t0)))
+plt.figure(figsize=(12,7))
+plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
+plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-')
+plt.plot(xr, NillNorm, 'o')
+plt.xlabel('t [d]')
+plt.ylabel('N')
 print('Time t0        : {:.2f} +- {:.2f}'.format(t0, dt0))
 print('Current level  : {:.2f} +- {:.2f}'.format(A, dA))
 print('Rise time      : {:.2f} +- {:.2f}'.format(tr, dTr))
 print('Current time   : {}'.format(max(xr)))
 ttp = t0+3*tr-max(xr)
 print('Time to plateau: {:.0f} (estimate)'.format(ttp))
-plt.annotate('Time to plateau: {:.0f} d'.format(ttp), (0.1, 0.9), xycoords='axes fraction')
+plt.annotate('[{}] Data up to {}'.format(country, dt.date.today()), (0.1, 0.9), xycoords='axes fraction')
+plt.annotate('Time to plateau: {:.0f} d'.format(ttp), (0.1, 0.85), xycoords='axes fraction')
 plt.savefig('logisticfit.png')
 plt.show()
 
+# plot normalised data about other categories
+if country == 'Italy':
+    NdeathNorm = normalise(Ndeaths)
+    NrecoNorm = normalise(Nrecovered)
+    NhospNorm = normalise(Nhospital)
+    NcritNorm = normalise(Ncritical)
+    plt.figure(figsize=(12,7))
+    plt.title('Evolution of COVID19 spread with time')
+    lgdI, = plt.plot(xr, NillNorm, '-o', label='Infected ({})'.format(max(Nill)))
+    lgdD, = plt.plot(xr, NdeathNorm, '-o', markerfacecolor='w', label='Death ({})'.format(max(Ndeaths)))
+    lgdR, = plt.plot(xr, NrecoNorm, '-o', markerfacecolor='w', label='Recovered ({})'.format(max(Nrecovered)))
+    lgdI, = plt.plot(xr, NhospNorm, '-o', markerfacecolor='w', label='Inpatient ({})'.format(max(Nhospital)))
+    lgcC, = plt.plot(xr, NcritNorm, '-o', markerfacecolor='w', label='Critical ({})'.format(max(Ncritical)))
+    plt.annotate('[{}] Data up to {}'.format(country, dt.date.today()), (0.1, 0.6), xycoords='axes fraction')
+    plt.xlabel('t [d]')
+    plt.ylabel('N/N$_{max}$')
+    plt.legend()
+    plt.savefig('normalised.png')
+    plt.show()
