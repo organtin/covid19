@@ -242,6 +242,10 @@ plt.show()
 def flog(x, A, b, t0, C):
     return C + A/(1+np.exp(b*(x-t0)))
 
+# the derivative of the logistic model
+def dflog(x, A, b, t0):
+    return -A*b*np.exp(b*(x-t0))/(1+np.exp(b*(x-t0)))**2
+
 # normalisation function
 def normalise(v):
     return [x/max(v) for x in v]
@@ -260,26 +264,51 @@ dA = np.sqrt(cov[3][3])/(p[3]**2)
 tr = 1/p[1]
 dTr = np.sqrt(cov[1][1])/(p[1]**2)
 xr2 = range(2*int(np.ceil(t0)))
+ttp = t0+3*tr-max(xr)
 plt.figure(figsize=(12,7))
 plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
-plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-')
-plt.plot(xr, NillNorm, 'o')
+dflogNorm = p[3]/dflog(p[2], p[0], p[1], p[2])
+plt.plot(xr2, dflogNorm*dflog(xr2, p[0], p[1], p[2]), '-', label = 'Logistic derivative (amplified)')
+plt.plot(xr, NillNorm, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
+tpeak = t0 - max(xr)
+plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-',         
+         label = 'Logistic model\nTime to plateau: {:.0f} d\nTime to peak: {:.0f} d'.format(ttp, tpeak))
+plt.legend()
 plt.xlabel('t [d]')
 plt.ylabel('N')
 print('Time t0        : {:.2f} +- {:.2f}'.format(t0, dt0))
 print('Current level  : {:.2f} +- {:.2f}'.format(A, dA))
 print('Rise time      : {:.2f} +- {:.2f}'.format(tr, dTr))
 print('Current time   : {}'.format(max(xr)))
-ttp = t0+3*tr-max(xr)
 print('Time to plateau: {:.0f} (estimate)'.format(ttp))
-plt.annotate('[{}] Data up to {}'.format(country, dt.date.today()), (0.1, 0.9), xycoords='axes fraction')
-plt.annotate('Time to plateau: {:.0f} d'.format(ttp), (0.1, 0.85), xycoords='axes fraction')
 plt.savefig('logisticfit.png')
 plt.show()
 
 # plot normalised data about other categories
 if db == 'Italy':
     Npop = 60e6
+
+    derDeath = []
+    derReco = []
+    derHosp = []
+    derCrit = []
+    for i in range(len(Nill) - 1):
+        derDeath.append(Ndeaths[i + 1] - Ndeaths[i])
+        derReco.append(Nrecovered[i + 1] - Nrecovered[i])
+        derHosp.append(Nhospital[i + 1] - Nhospital[i])
+        derCrit.append(Ncritical[i + 1] - Ncritical[i])
+    xder = xr[:-1]
+    plt.figure(figsize=(12,7))
+    plt.title('Derivative of categories\n{}'.format(country))
+    plt.plot(xder, derDeath, '-o', label = 'Deaths')
+    plt.plot(xder, derReco, '-o', label = 'Recovered')
+    plt.plot(xder, derHosp, '-o', label = 'In need of hospital')
+    plt.plot(xder, derCrit, '-o', label = 'in need for ICU')
+    plt.xlabel('t [d]')
+    plt.ylabel('dN/dt [d$^{-1}$]')
+    plt.legend()
+    plt.savefig('derivatives.png')
+    plt.show()
     
     NdeathNorm = normalise(Ndeaths)
     NrecoNorm = normalise(Nrecovered)
@@ -307,7 +336,7 @@ if db == 'Italy':
     plt.plot(xr, NhospNorm, '-o', markerfacecolor='w', label=label)
     label = 'Critical ({}) {:.2f}% of infected'.format(max(Ncritical), rCrit2Ill)
     plt.plot(xr, NcritNorm, '-o', markerfacecolor='w', label=label)
-    plt.annotate('[{}] Data up to {}'.format(country, dt.date.today()), (0.1, 0.6), xycoords='axes fraction')
+    plt.annotate('[{}] Data up to {}'.format(country, head[-1]), (0.1, 0.6), xycoords='axes fraction')
     plt.xlabel('t [d]')
     plt.ylabel('N/N$_{max}$')
     plt.legend()
