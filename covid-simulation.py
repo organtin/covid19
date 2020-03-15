@@ -14,14 +14,15 @@ class Person:
     _recoveryTime = 200
     _P = 0
 
-    def __init__(self, P):
+    def __init__(self, P, initialP=0.02):
         self._position[0] = np.random.uniform()
         self._position[1] = np.random.uniform()
         theta = np.random.uniform(0, 2*math.pi)
         self._velx = np.cos(theta)
         self._vely = np.sin(theta)
-        self._P = P
+        self._P = initialP
         self.setAsIll()
+        self._P = P
     def isIll(self):
         ret = False
         if self._ill == 1:
@@ -128,13 +129,14 @@ class Town:
                 n += 1
         return n
     
-N = 1000
-dt = 0.1
+N = 500
+dt = 0.5
 size = 200
+frames = 2000
 
 t = Town('COVIDVille', size)
 for i in range(N):
-    t.add(Person(0.25))
+    t.add(Person(0.75))
 
 print('======== ' + t.name())
 p = t.population()
@@ -144,9 +146,14 @@ t.step(dt)
 
 fig = plt.figure(figsize=(6, 6))
 ax = fig.add_axes([0, 0.1, 1, 1])
+ay = fig.add_axes([0.5, 0, 1, 0.1])
 ax.set_xlim(0, size)
 ax.set_ylim(0, size)
 ax.get_xaxis().set_visible(False)
+ay.set_xlim(0, frames / 0.5)
+ay.set_ylim(0, N)
+ay.get_xaxis().set_visible(False)
+ay.get_yaxis().set_visible(False)
 
 x = []
 y = []
@@ -156,9 +163,12 @@ for pi in p:
 for pi in p:
     y.append(pi.position()[1])
 scat = ax.scatter(x, y, s=10, edgecolors='red', facecolors='red')
-ills = t.nIll()
-rills = ills/len(p)*100
-txt = plt.text(0.1, 0.03, 'Infected: {} ({:.1f} %)'.format(ills, rills),
+time = []
+ills = []
+time.append(0)
+ills.append(t.nIll())
+rills = ills[-1]/len(p)*100
+txt = plt.text(0.01, 0.03, 't: {} Infected: {} ({:.1f} %)'.format(1, ills, rills),
                fontsize = 13, transform=fig.transFigure)
 
 def animate(i):
@@ -176,13 +186,15 @@ def animate(i):
             health.append(20)
     scat.set_offsets(np.c_[x, y])
     scat.set_array(np.array(health))
-    ills = t.nIll()
-    rills = ills/len(p)*100
-    txt.set_text('Infected: {} ({:.1f} %)'.format(ills, rills))
+    time.append(i)
+    ills.append(t.nIll())
+    rills = ills[-1]/len(p)*100
+    txt.set_text('t: {} Infected: {} ({:.1f} %)'.format(i + 1, ills[-1], rills))
+    ay.plot(time, ills, 'b-')
     return scat
 
-anim = animation.FuncAnimation(fig, animate, interval=20, frames=200, repeat = False)
+anim = animation.FuncAnimation(fig, animate, interval=20, frames=frames, repeat = False)
 
-anim.save('covid_animation_n200x1000.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
+#anim.save('covid_animation_n200x1000.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
 
 plt.show()
