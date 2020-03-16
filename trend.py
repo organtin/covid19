@@ -29,6 +29,7 @@ import ssl
 import sys
 import os
 import re
+from shutil import copyfile
 
 # You can download the data from the following URL. Data are expected to be organised as
 # in the given CSV file. 
@@ -74,6 +75,7 @@ if (len(sys.argv) > 1):
 # download data
 print('Getting data from {} for {}'.format(url.rstrip(), country))
 filename = wget.download(url)
+copyfile(filename, 'saved.csv')
 if db == 'Italy' and len(region) > 0:
     # remove useless columns from the input file: read it and write a new file
     fi = open(filename, 'r')
