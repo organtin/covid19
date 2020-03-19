@@ -112,6 +112,7 @@ if db == 'Italy':
     data = w.T.values.tolist()
     head = [dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in data[0]]
     Nill = data[10]
+    Nnewills = data[7]
     Ndeaths = data[9]
     Nrecovered = data[8]
     Nhospital = data[4]
@@ -139,6 +140,7 @@ Nill = Nill[i:]
 head  = head[i:]
 if (db != 'World'):
     Ndeaths = Ndeaths[i:]
+    Nnewills = Nnewills[i:]
     Nrecovered = Nrecovered[i:]
     Nhospital = Nhospital[i:]
     Ncritical = Ncritical[i:]
@@ -270,11 +272,17 @@ ttp = t0+3*tr-max(xr)
 plt.figure(figsize=(12,7))
 plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
 dflogNorm = p[3]/dflog(p[2], p[0], p[1], p[2])
+ampli = dflogNorm*dflog(t0, p[0], p[1], p[2])
+NnewillsNorm = [ampli*x/max(Nnewills) for x in Nnewills]
+snewillsnorm = [ampli*np.sqrt(x)/max(Nnewills) for x in Nnewills]
+#plt.errorbar(xr, NnewillsNorm, yerr=snewillsnorm, fmt='o')
 plt.plot(xr2, dflogNorm*dflog(xr2, p[0], p[1], p[2]), '-', label = 'Logistic derivative (amplified)')
 plt.plot(xr, NillNorm, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
 tpeak = t0 - max(xr)
 plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-',         
          label = 'Logistic model\nTime to plateau: {:.0f} d\nTime to peak: {:.0f} d'.format(ttp, tpeak))
+print('Date of the peak   : {}'.format(head[-1] + td(days = tpeak)))
+print('Date of the plateau: {}'.format(head[-1] + td(days = ttp)))
 plt.legend()
 plt.xlabel('t [d]')
 plt.ylabel('N')
