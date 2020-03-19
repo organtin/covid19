@@ -160,7 +160,7 @@ def fit(y, n, m=-1):
     Nr = y[n:m]
     xr = np.arange(n,m)
     dNr = [np.sqrt(x) for x in Nr]
-    p, cov = curve_fit(fun, xr, Nr, sigma=dNr)
+    p, cov = curve_fit(fun, xr, Nr, sigma=dNr, maxfev=10000)
     s0 = np.sqrt(cov[0][0])
     s1 = np.sqrt(cov[1][1])
     return p[0], p[1], s0, s1
@@ -232,7 +232,7 @@ plt.show()
 deriv = []
 i = 0
 for i in range(len(lNill) - 1):
-    deriv.append(lNill[i + 1]-lNill[i])
+    deriv.append(1/(lNill[i + 1]-lNill[i]))
     i += 1
 plt.figure(figsize=(12,7))
 plt.title('Evolution of the characteristic time of coronavirus spread\n{}'.format(country))
