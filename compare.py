@@ -1,7 +1,7 @@
 ################################################################################
 #
 #    compare.py - Analyse data of the spread of the COVID19 per Italian regions
-#    usage: python3 trend.py [name of the country] [minimum number of ills]
+#    usage: python3 compare.py
 #    Copyright (C) 2020 giovanni.organtini@uniroma1.it
 #
 #    This program is free software: you can redistribute it and/or modify
