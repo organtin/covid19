@@ -57,6 +57,15 @@ def covidhelp():
     print('       starting from the date at which the number of infected begins to be ')
     print('       higher than [min] (default to 4).')
 
+
+# a logistic model
+def flog(x, A, b, t0, C):
+    return C + A/(1+np.exp(b*(x-t0)))
+
+# the derivative of the logistic model
+def dflog(x, A, b, t0):
+    return -A*b*np.exp(b*(x-t0))/(1+np.exp(b*(x-t0)))**2
+
 # get arguments, if any
 if (len(sys.argv) > 1):
     if not re.match('.*/', sys.argv[1]):
@@ -93,19 +102,6 @@ if db == 'Italy' and len(region) > 0:
 def fun(x, a, b):
     return a*np.exp(x/b)
 
-# A function to make nice plots
-def myplot(x, y, ylabel, fname='output.png', title=None):
-    plt.figure(figsize=(12,7))
-    plt.plot(x, y, 'o')
-    plt.xticks(rotation=45)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.savefig(fname)
-    plt.show()
-
-# Open the data file and read it
-f = open(filename, 'r')
-
 w = pd.read_csv(filename)
 os.remove(filename)
 if db == 'Italy':
@@ -115,8 +111,11 @@ if db == 'Italy':
     Nnewills = data[7]
     Ndeaths = data[9]
     Nrecovered = data[8]
+    Nsymptoms = data[2]
+    Nisolated = data[5]
     Nhospital = data[4]
     Ncritical = data[3]
+    Ntested = data[11]
 else:
     data = w.values.tolist()
     head = [dt.datetime.strptime(x, '%m/%d/%y') for x in w.columns[4:]]
@@ -144,13 +143,104 @@ if (db != 'World'):
     Nrecovered = Nrecovered[i:]
     Nhospital = Nhospital[i:]
     Ncritical = Ncritical[i:]
+    Nsymptoms = Nsymptoms[i:]
+    Nisolated = Nisolated[i:]
+    Ntested = Ntested[i:]
+    # make the Longo plot (cumulating patients in isolation, in hospital and in ICU)
+    NcumIsol = []
+    NcumSymp = []
+    NcumCrit = []
+    NcumErr  = []
+    for i in range(len(head) - 1):
+        N1 = Nisolated[i]
+        N2 = Nisolated[i + 1]
+        NcumIsol.append(N2-N1)
+        N1 = Nsymptoms[i]
+        N2 = Nsymptoms[i + 1]
+        NcumSymp.append(N2-N1)
+        N1 = Ncritical[i]
+        N2 = Ncritical[i + 1]
+        NcumCrit.append(N2-N1)
+        NcumErr = np.sqrt(NcumIsol[-1] + NcumSymp[-1] + NcumCrit[-1])
+    plt.figure(figsize=(12,7))
+    pbIsol = plt.bar(head[:-1], NcumIsol)
+    bottom = NcumIsol
+    for i in range(len(bottom)):
+        if bottom[i] < 0:
+            bottom[i] = 0
+    pbSymp = plt.bar(head[:-1], NcumSymp, bottom = bottom)
+    nOthers = [x + y for x, y in zip(NcumIsol, NcumSymp)]
+    bottom = nOthers
+    for i in range(len(bottom)):
+        if bottom[i] < 0:
+            bottom[i] = 0
+    pbCrit = plt.bar(head[:-1], NcumCrit, bottom = bottom, yerr = NcumErr)
+    plt.xlabel('t [d]')
+    plt.ylabel('$N_{isolated} + N_{with symptoms} + N_{crit}$')
+    plt.title(country)
+    plt.xticks(rotation=45)
+    plt.legend([pbIsol[0], pbCrit[0], pbSymp[0]], ['in isolation', 'in critical conditions', 'with symptoms'])
+    plt.savefig('longoplot.png')
+    plt.plot()
+
+# compute new infected, then aggregate data by two consecutive days
+Ntemp = []
+NnewComputed = []
+for i in range(len(head) - 1):
+    Ntemp.append(Nill[i + 1] - Nill[i])
+i = 0
+merge = 4
+underestimated = 0
+while (i < len(Ntemp) - 1):
+    Nn = 0
+    for k in range(merge):
+        if i + k < len(Ntemp):
+            dNn = Ntemp[i + k]
+        else:
+            dNn = 0
+            underestimated += 1
+        Nn += dNn
+    NnewComputed.append(Nn)
+    i += merge
+xx = range(len(NnewComputed))
+# compute the unicertainties of the new infected
+dNr = np.sqrt(NnewComputed)
+# normalise to their maximum
+M = max(NnewComputed)
+NnewComputed = [x/M for x in NnewComputed]
+dNr = [x/M for x in dNr]
+# fit the data with the derivative of the logistic curve
+lastbin = len(xx)
+if underestimated > 0:
+    lastbin = -1
+p, cov = curve_fit(dflog, xx[:lastbin], NnewComputed[:lastbin], sigma = dNr[:lastbin], maxfev=10000)
+# plot the result
+print('t0 = {:.0f} from now'.format(len(xx) - p[2]))
+plt.figure(figsize=(12,7))
+plt.bar(xx, NnewComputed, yerr = dNr,
+        label = 'New infected - aggregating {} days'.format(merge))
+if underestimated > 0:
+    plt.annotate('Last bin missing data from {} days\n(not fitted)'.format(underestimated), (0.1,0.9))
+xx2 = range(2*max(xx))
+tpeak = str(head[0] + td(days = merge*p[2]))
+tpeak = tpeak.split(' ')[0]
+plt.plot(xx2, dflog(xx2, p[0], p[1], p[2]), '-',
+         label = 'dL/dt Fit ($t_0={}$)'.format(tpeak), color='orange')
+plt.legend()
+i = 1
+xtlabels = []
+while i < len(head):
+    xtlabels.append(str(head[i - 1]).split(' ')[0][5:])
+    i += merge
+plt.xticks(xx, xtlabels, rotation = 90)
+plt.xlabel('t [d]')
+plt.ylabel('$N_{new infected}$ (computed)')
+plt.title(country + '\nFit with the derivative of logistic curve')
+plt.savefig('derivative-of-logistic.png')
+plt.show()
 
 # Compute the logarithm of the data
 lNill = [np.log(x) for x in Nill]
-
-# Do plots of data and their logarithm vs time
-myplot(head, Nill, 'N', 'NvsT.png', country)
-myplot(head, lNill, 'log(N)', 'logNvsT.png', country)
 
 # A function to perform a fit
 def fit(y, n, m=-1):
@@ -171,9 +261,9 @@ print('Fit done: tau = {} +- {}'.format(tau, dtau))
 print('            A = {} +- {}'.format(A, dA))
 
 # A function to make a nice plot
-def myplotfit(plt, x, y, p0, p1, s0, s1, legendPosition=0, legend=None, title=None):
+def myplotfit(plt, x, y, p0, p1, s0, s1, legendPosition=0, legend=None, title=None, fmt = 'o'):
     plt.xticks(rotation=45)
-    plt.plot(x, np.log(y), 'o')
+    plt.plot(x, np.log(y), fmt)
     xr = range(len(x))
     if legend != None:
         ymin, ymax = plt.ylim()
@@ -188,11 +278,6 @@ def myplotfit(plt, x, y, p0, p1, s0, s1, legendPosition=0, legend=None, title=No
     if title != None:
         plt.title(title)
     plt.fill_between(x, np.log(f1), np.log(f2), alpha=0.25)
-
-# Create a plot and show data with the model superimposed
-plt.figure(figsize=(12,7))
-myplotfit(plt, head, Nill, A, tau, dA, dtau, .9, 'Fit last 10 points', title=country)
-plt.show()
 
 # Fit a portion of the data iteratively
 intervalAmplitude = 6
@@ -242,23 +327,58 @@ plt.xticks(rotation=45)
 plt.savefig('dtaudt.png')
 plt.show()
 
-# a logistic model
-def flog(x, A, b, t0, C):
-    return C + A/(1+np.exp(b*(x-t0)))
-
-# the derivative of the logistic model
-def dflog(x, A, b, t0):
-    return -A*b*np.exp(b*(x-t0))/(1+np.exp(b*(x-t0)))**2
-
 # normalisation function
 def normalise(v):
     return [x/max(v) for x in v]
+
+# the Gompterz function dev +
+def fgompertz(x, N0, b, c):
+    return N0*np.exp(-b*np.exp(-c*x))
+
+def dfgompertz(x, N0, b, c):
+    return b*c*N0*np.exp(-b*np.exp(-c*x)-c*x)
 
 # normalise data
 NillNorm = normalise(Nill)
 
 # fit and plot normalised data
 xr = range(len(NillNorm))
+pg, cov = curve_fit(fgompertz, xr, NillNorm, sigma=np.sqrt(NillNorm), maxfev=10000)
+print('==== Gompertz +')
+print(pg)
+# p[0] = max level
+# p[1] = displacemente along t
+# p[2] = slope
+thwp = -np.log(np.log(2)/pg[1])/pg[2]
+print('t_hwp = {}'.format(thwp))
+print('t_max = {}'.format(np.log(pg[1])/pg[2]))
+xr2 = range(150)
+plt.plot(xr2, fgompertz(xr2, pg[0], pg[1], pg[2]), '-',
+         label = 'Gompertz fit: $t(1/2) = {:.0f}$ d'.format(thwp))
+plt.plot(xr, NillNorm, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
+plt.xlabel('t from case {} [d]'.format(min_val))
+plt.ylabel('$N_{infected}$')
+plt.legend()
+plt.show()
+pgd, cov = curve_fit(dfgompertz, xx[:lastbin], NnewComputed[:lastbin],
+                     sigma=np.sqrt(NnewComputed[:lastbin]), maxfev=10000)
+print(pgd)
+nthwp = -np.log(np.log(2)/pgd[1])/pgd[2]
+t_halfpeak = str(head[0] + td(days = merge * nthwp)).split(' ')[0]
+print('t(1/2) = {}'.format(t_halfpeak))
+xr2 = range(2*len(xx))
+plt.figure(figsize=(12,7))
+plt.plot(xr2, dfgompertz(xr2, pgd[0], pgd[1], pgd[2]), '-',
+         label = 'Gompertz derivative - t(1/2): {}'.format(t_halfpeak))
+plt.plot(xx, NnewComputed, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
+if underestimated > 0:
+    plt.annotate('Last bin missing data from {} days\n(not fitted)'.format(underestimated), (0.1,0.9))
+plt.xticks(xx, xtlabels, rotation = 90)
+plt.xlabel('t [d]')
+plt.ylabel('$N_{new\,infected}$ (computed)')
+plt.legend()
+plt.show()
+print('==== Gompertz -')
 p, cov = curve_fit(flog, xr, NillNorm, sigma=np.sqrt(NillNorm), maxfev=10000)
 print(p)
 t0 = p[2]
@@ -273,10 +393,10 @@ plt.figure(figsize=(12,7))
 plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
 dflogNorm = p[3]/dflog(p[2], p[0], p[1], p[2])
 ampli = dflogNorm*dflog(t0, p[0], p[1], p[2])
-NnewillsNorm = [ampli*x/max(Nnewills) for x in Nnewills]
-snewillsnorm = [ampli*np.sqrt(x)/max(Nnewills) for x in Nnewills]
-#plt.errorbar(xr, NnewillsNorm, yerr=snewillsnorm, fmt='o')
 plt.plot(xr2, dflogNorm*dflog(xr2, p[0], p[1], p[2]), '-', label = 'Logistic derivative (amplified)')
+plt.plot(xr2, fgompertz(xr2, pg[0], pg[1], pg[2]), '-', label = 'Gompertz')
+if pg[0] > ampli:
+    plt.ylim(0, ampli*1.2)
 plt.plot(xr, NillNorm, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
 tpeak = t0 - max(xr)
 plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-',         
