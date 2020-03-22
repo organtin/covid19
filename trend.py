@@ -189,7 +189,7 @@ NnewComputed = []
 for i in range(len(head) - 1):
     Ntemp.append(Nill[i + 1] - Nill[i])
 i = 0
-merge = 4
+merge = 3
 underestimated = 0
 while (i < len(Ntemp) - 1):
     Nn = 0
@@ -232,9 +232,16 @@ xtlabels = []
 while i < len(head):
     xtlabels.append(str(head[i - 1]).split(' ')[0][5:])
     i += merge
-plt.xticks(xx, xtlabels, rotation = 90)
+lastlabel = head[len(head) - 1]
+i = 0
+# add more ticks
+while i < len(head):
+    lastlabel += td(days = merge)
+    xtlabels.append(str(lastlabel).split(' ')[0][5:])
+    i += merge    
+plt.xticks(xx2, xtlabels, rotation = 90)
 plt.xlabel('t [d]')
-plt.ylabel('$N_{new infected}$ (computed)')
+plt.ylabel('$N_{new\\,infected}$ (computed)')
 plt.title(country + '\nFit with the derivative of logistic curve')
 plt.savefig('derivative-of-logistic.png')
 plt.show()
@@ -364,7 +371,7 @@ pgd, cov = curve_fit(dfgompertz, xx[:lastbin], NnewComputed[:lastbin],
                      sigma=np.sqrt(NnewComputed[:lastbin]), maxfev=10000)
 print(pgd)
 nthwp = -np.log(np.log(2)/pgd[1])/pgd[2]
-t_halfpeak = str(head[0] + td(days = merge * nthwp)).split(' ')[0]
+t_halfpeak = str(head[0] + td(days = merge * (nthwp - 1))).split(' ')[0]
 print('t(1/2) = {}'.format(t_halfpeak))
 xr2 = range(2*len(xx))
 plt.figure(figsize=(12,7))
@@ -373,9 +380,9 @@ plt.plot(xr2, dfgompertz(xr2, pgd[0], pgd[1], pgd[2]), '-',
 plt.plot(xx, NnewComputed, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
 if underestimated > 0:
     plt.annotate('Last bin missing data from {} days\n(not fitted)'.format(underestimated), (0.1,0.9))
-plt.xticks(xx, xtlabels, rotation = 90)
+plt.xticks(xx2, xtlabels, rotation = 90)
 plt.xlabel('t [d]')
-plt.ylabel('$N_{new\,infected}$ (computed)')
+plt.ylabel('$N_{new\\,infected}$ (computed)')
 plt.legend()
 plt.show()
 print('==== Gompertz -')
@@ -509,4 +516,10 @@ if db == 'Italy':
     plt.ylabel('N/N$_{infected}$')
     plt.legend()
     plt.savefig('consequences.png')
+    plt.show()
+
+    infectedOverTested = [x/y for x, y in zip(Nill, Ntested)]
+    plt.plot(xr, infectedOverTested)
+    plt.xlabel('t [d]')
+    plt.ylabel('Infected/Tested')
     plt.show()
