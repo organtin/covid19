@@ -106,7 +106,7 @@ w = pd.read_csv(filename)
 os.remove(filename)
 if db == 'Italy':
     data = w.T.values.tolist()
-    head = [dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S') for x in data[0]]
+    head = [dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S') for x in data[0]]
     Nill = data[10]
     Nnewills = data[7]
     Ndeaths = data[9]
@@ -189,7 +189,7 @@ NnewComputed = []
 for i in range(len(head) - 1):
     Ntemp.append(Nill[i + 1] - Nill[i])
 i = 0
-merge = 3
+merge = 4
 underestimated = 0
 while (i < len(Ntemp) - 1):
     Nn = 0
@@ -229,8 +229,8 @@ plt.plot(xx2, dflog(xx2, p[0], p[1], p[2]), '-',
 plt.legend()
 i = 1
 xtlabels = []
-while i < len(head):
-    xtlabels.append(str(head[i - 1]).split(' ')[0][5:])
+while i < len(head) - 1:
+    xtlabels.append(str(head[i + 1]).split(' ')[0][5:])
     i += merge
 lastlabel = head[len(head) - 1]
 i = 0
@@ -384,6 +384,7 @@ plt.xticks(xx2, xtlabels, rotation = 90)
 plt.xlabel('t [d]')
 plt.ylabel('$N_{new\\,infected}$ (computed)')
 plt.legend()
+plt.savefig('gompertz-derivative.png')
 plt.show()
 print('==== Gompertz -')
 p, cov = curve_fit(flog, xr, NillNorm, sigma=np.sqrt(NillNorm), maxfev=10000)
