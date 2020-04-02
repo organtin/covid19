@@ -30,13 +30,15 @@ import sys
 import os
 import re
 from shutil import copyfile
+import math
 
 # You can download the data from the following URL. Data are expected to be organised as
 # in the given CSV file. 
 
 ssl._create_default_https_context = ssl._create_unverified_context
 urls = {
-    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
+#    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
+    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv',
     'Italy' : 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv',
     'Regional': 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv'
     }
@@ -107,24 +109,24 @@ os.remove(filename)
 if db == 'Italy':
     data = w.T.values.tolist()
     head = [dt.datetime.strptime(x, '%Y-%m-%dT%H:%M:%S') for x in data[0]]
-    Nill = data[10]
+    Nill = data[11]
     Nnewills = data[7]
-    Ndeaths = data[9]
-    Nrecovered = data[8]
+    Ndeaths = data[10]
+    Nrecovered = data[9]
     Nsymptoms = data[2]
     Nisolated = data[5]
     Nhospital = data[4]
     Ncritical = data[3]
-    Ntested = data[11]
+    Ntested = data[12]
 else:
+    w = w[w['Country/Region'] == country]
     data = w.values.tolist()
-    head = [dt.datetime.strptime(x, '%m/%d/%y') for x in w.columns[4:]]
-    i = 0;
-
-    # Select only data belonging to a given country as specified in column 1
-    while data[i][1] != country:
-        i += 1
-    Nill = data[i][4:]
+    head = [dt.datetime.strptime(x, '%m/%d/%y') for x in w.columns[4:]]    
+    Nill = data[0][4:]
+    for i in range(1, w.shape[0]):
+        Nill = [sum(x) for x in zip(Nill, data[i][4:])]
+        print(Nill[-1])
+    print(Nill)
 
 # Use only data with Nill > threshold. By default the threshold is 4
 i = 0

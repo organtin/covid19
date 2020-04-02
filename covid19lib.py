@@ -31,49 +31,6 @@ import os
 import re
 from shutil import copyfile
 
-# You can download the data from the following URL. Data are expected to be organised as
-# in the given CSV file. 
-
-ssl._create_default_https_context = ssl._create_unverified_context
-urls = {
-    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv',
-    'Italy' : 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv',
-    'Regional': 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv'
-    }
-
-url = urls['Italy']
-db = 'Italy'
-country = 'Italy'
-region = ''
-
-print(sys.argv)
-# get arguments, if any
-if (len(sys.argv) > 1):
-    if not re.match('.*/', sys.argv[1]):
-        sys.argv[1] += "/"
-    (db, region) = sys.argv[1].split("/")
-    if db == 'Italy' and len(region) > 0:
-        url = urls['Regional']
-        country = region
-    elif db == 'World': 
-        url = urls['World']
-        country = sys.argv[1].split("/")[1]
-    elif not (db == 'Italy' and len(region) == 0):
-        covidhelp()
-        exit(0)
-
-# help function
-def covidhelp():
-    print('Usage: {} [source] [min]'.format(sys.argv[0]))
-    print('       [source] is optional and can be either "Italy[/<region>]" or "World/<country>"')
-    print('       where <country> is the name of the country in which you are')
-    print('       interested in (e.g. "World/China" or "World/Norway").')
-    print('       The deafult source is Italy. Using Italy/Lazio you use only data for Lazio.')
-    print('       [min] identifies the starting point of the plot. Data are considered only')
-    print('       starting from the date at which the number of infected begins to be ')
-    print('       higher than [min] (default to 4).')
-
-
 # a logistic model
 def flog(x, A, b, t0, C):
     return C + A/(1+np.exp(b*(x-t0)))
@@ -197,7 +154,7 @@ def computeDifferences(head, timeseries, merge = 4):
     NnewComputed = [x/M for x in NnewComputed]
     return xx, NnewComputed
 
-def getCleanData(filename, db, column, drop = 0):
+def getCleanData(filename, db, column, region = '', drop = 0):
     Nill, head = readData(filename, db, region, column)
     i = dropLowStatistics(Nill)
     Nill = Nill[i:]
@@ -208,7 +165,7 @@ def getCleanData(filename, db, column, drop = 0):
     return Nill, head
 
 # plot the result
-def barplot(x, head, y, dy, p, tpeak, merge = 4, title = 'totale_casi', fun = dflog):
+def barplot(x, head, y, dy, p, tpeak, country, merge = 4, title = 'totale_casi', fun = dflog):
     title += ' (differences)'
     plt.figure(figsize=(12,7))
     plt.bar(x, y, yerr = dy, label = 'aggregating {} days'.format(merge))
@@ -243,7 +200,7 @@ def computeTimes(p, cov, fun, merge):
         dt0 = np.sqrt(s1+s2)
     return t0, dt0
         
-def doplot(x, y, head, p, cov, title = 'totale_casi', fun = flog, merge = 4):
+def doplot(x, y, head, p, cov, country, title = 'totale_casi', fun = flog, merge = 4):
     t0, dt0 = computeTimes(p, cov, fun, merge)
     tr = 2*t0
     dTr = 2*dt0
@@ -260,7 +217,11 @@ def doplot(x, y, head, p, cov, title = 'totale_casi', fun = flog, merge = 4):
         line += ' ' + str(pL[i])
     fd.write(line + '\n')
     plt.figure(figsize=(12,7))
-    plt.title('Evolution of COVID19 spread with time\n' + title + ' Logistic model')
+    if fun == flog:
+        title += ' Logistic model'
+    else:
+        title += ' Gompertz'
+    plt.title('Evolution of COVID19 spread with time\n' + title)
     plt.plot(x, y, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
     tpeak = t0
     if fun == flog:
@@ -312,30 +273,31 @@ def dumpResult(lastDay, p, merge, fun = flog):
 # start of the analysis
 def analyse(url, country, db, region, merge = 4, drop = 0, column='totale_casi'):
     filename   = download(url, country, db, region)
-    Nill, head = getCleanData(filename, db, column, drop)
+    Nill, head = getCleanData(filename, db, column, region, drop)
     dNill = np.sqrt(Nill)
     M = max(Nill)
     xx, NnewComputed = computeDifferences(head, Nill)
     dNr = [x/M for x in NnewComputed]
     p, cov, tpeak = doFit(head, xx, NnewComputed, dNr, merge)
-    barplot(xx, head, NnewComputed, dNr, p, tpeak, title = column)
-    doplot(range(len(Nill)), Nill, head, p, cov, title = column, merge = merge)
+    barplot(xx, head, NnewComputed, dNr, p, tpeak, country, title = column)
+    doplot(range(len(Nill)), Nill, head, p, cov, country, title = column, merge = merge)
     pg, cov, tpeak = doFit(head, xx, NnewComputed, dNr, merge, fun = dfgompertz)
-    barplot(xx, head, NnewComputed, dNr, pg, tpeak, title = column, fun = dfgompertz)
-    doplot(range(len(Nill)), Nill, head, pg, cov, title = column,
+    barplot(xx, head, NnewComputed, dNr, pg, tpeak, country, title = column, fun = dfgompertz)
+    doplot(range(len(Nill)), Nill, head, pg, cov, country, title = column,
            fun = fgompertz, merge = merge)
     return filename
 
-def plotRatio(numerator, denominator, db = 'Italy', region = ''):
-    num, t   = readData(filename, db, region, numerator)
-    den, t = readData(filename, db, region, denominator)
+def plotRatio(numerator, denominator, db = 'Italy', region = '', fname = ''):
+    num, t   = readData(fname, db, region, numerator)
+    den, t = readData(fname, db, region, denominator)
     while den[0] == 0:
         den.pop(0)
         num.pop(0)
         t.pop(0)
     rdi = [x/y for x, y in zip(num, den)]
+    drdi = [np.sqrt(1/x + 1/y)*x/y for x, y in zip(num, den)]
     plt.figure(figsize=(12,7))
-    plt.plot(t, rdi)
+    plt.errorbar(t, rdi, yerr = drdi, fmt = 'o')
     plt.title(numerator + '/' + denominator)
     plt.xticks(rotation = 45)
     pngfile = numerator + denominator
@@ -343,23 +305,3 @@ def plotRatio(numerator, denominator, db = 'Italy', region = ''):
     plt.savefig(pngfile + '.png')
     plt.show()
 
-filename = download(url, country, db, region)
-
-if db == 'Italy':
-    plotRatio('deceduti', 'totale_casi')
-    plotRatio('ricoverati_con_sintomi+terapia_intensiva+isolamento_domiciliare', 'totale_casi')
-    plotRatio('totale_ospedalizzati', 'totale_casi')
-    plotRatio('terapia_intensiva', 'totale_casi')
-    plotRatio('totale_casi', 'tamponi')
-
-i = 0
-#for i in range(15):
-analyse(url, country, db, region, column = 'totale_casi', drop = i)
-
-os.remove('dLdt.results')
-os.remove('L.results')
-cols = getColumns(filename)
-#for i in range(2, 11):
-#    analyse(url, country, db, region, column = cols[i])
-
-os.remove(filename)

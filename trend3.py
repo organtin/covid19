@@ -18,7 +18,11 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 ###########################################################################
-import covid19lib
+import covid19lib as c19
+import sys
+import ssl
+import os
+import re
 
 ssl._create_default_https_context = ssl._create_unverified_context
 urls = {
@@ -60,23 +64,26 @@ def covidhelp():
     print('       higher than [min] (default to 4).')
 
 
-filename = download(url, country, db, region)
+filename = c19.download(url, country, db, region)
 
 if db == 'Italy':
-    plotRatio('deceduti', 'totale_casi')
-    plotRatio('ricoverati_con_sintomi+terapia_intensiva+isolamento_domiciliare', 'totale_casi')
-    plotRatio('totale_ospedalizzati', 'totale_casi')
-    plotRatio('terapia_intensiva', 'totale_casi')
-    plotRatio('totale_casi', 'tamponi')
+    c19.plotRatio('deceduti', 'totale_casi', fname = filename)
+    c19.plotRatio('ricoverati_con_sintomi+terapia_intensiva+isolamento_domiciliare',
+                  'totale_casi', fname = filename)
+    c19.plotRatio('totale_ospedalizzati', 'totale_casi', fname = filename)
+    c19.plotRatio('terapia_intensiva', 'totale_casi', fname = filename)
+    c19.plotRatio('totale_casi', 'tamponi', fname = filename)
 
 i = 0
+#os.remove('dLdt.results')
+#os.remove('L.results')
 #for i in range(15):
-analyse(url, country, db, region, column = 'totale_casi', drop = i)
+#    c19.analyse(url, country, db, region, column = 'totale_casi', drop = i)
 
-os.remove('dLdt.results')
-os.remove('L.results')
-cols = getColumns(filename)
+#cols = c19.getColumns(filename)
 #for i in range(2, 11):
-#    analyse(url, country, db, region, column = cols[i])
+#    c19.analyse(url, country, db, region, column = cols[i])
+
+c19.analyse(url, country, db, region, column = 'deceduti')    
 
 os.remove(filename)

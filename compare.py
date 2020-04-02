@@ -38,10 +38,10 @@ def line(x, a, b):
 w = pd.read_csv(filename)
 os.remove(filename)
 data = w.T.values.tolist()
-d = { 'ill': 14,
+d = { 'ill': 15,
       'inNeedForHospital': 8,
       'inNeedForICU': 9,
-      'died': 13
+      'died': 14
       }
 
 # make a plot
