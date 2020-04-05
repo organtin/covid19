@@ -32,13 +32,15 @@ import re
 from shutil import copyfile
 import math
 
+drop = 0
+
 # You can download the data from the following URL. Data are expected to be organised as
 # in the given CSV file. 
 
 ssl._create_default_https_context = ssl._create_unverified_context
 urls = {
 #    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv',
-    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv',
+    'World' : 'https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv',
     'Italy' : 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv',
     'Regional': 'https://raw.githubusercontent.com/pcm-dpc/COVID-19/master/dati-regioni/dpc-covid19-ita-regioni.csv'
     }
@@ -139,6 +141,9 @@ while (Nill[i] < min_val):
 
 Nill = Nill[i:]
 head  = head[i:]
+if drop > 0:
+    Nill = Nill[:-drop]
+    head = head[:-drop]
 if (db != 'World'):
     Ndeaths = Ndeaths[i:]
     Nnewills = Nnewills[i:]
@@ -193,7 +198,8 @@ for i in range(len(head) - 1):
 i = 0
 merge = 4
 underestimated = 0
-while (i < len(Ntemp) - 1):
+#while (i < len(Ntemp) - 1):
+while (i < len(Ntemp)):
     Nn = 0
     for k in range(merge):
         if i + k < len(Ntemp):
