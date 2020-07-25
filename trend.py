@@ -141,6 +141,8 @@ while (Nill[i] < min_val):
 
 Nill = Nill[i:]
 head  = head[i:]
+#Nill = Ntested[i:]
+#Nill = Nrecovered[i:]
 if drop > 0:
     Nill = Nill[:-drop]
     head = head[:-drop]
@@ -403,7 +405,7 @@ A = 1/p[3]
 dA = np.sqrt(cov[3][3])/(p[3]**2)
 tr = 1/p[1]
 dTr = np.sqrt(cov[1][1])/(p[1]**2)
-xr2 = range(2*int(np.ceil(t0)))
+xr2 = range(3*int(np.ceil(t0)))
 ttp = t0+3*tr-max(xr)
 plt.figure(figsize=(12,7))
 plt.title('Evolution of COVID19 spread with time (tentative)\nLogistic model')
@@ -412,7 +414,7 @@ ampli = dflogNorm*dflog(t0, p[0], p[1], p[2])
 plt.plot(xr2, dflogNorm*dflog(xr2, p[0], p[1], p[2]), '-', label = 'Logistic derivative (amplified)')
 plt.plot(xr2, fgompertz(xr2, pg[0], pg[1], pg[2]), '-', label = 'Gompertz')
 if pg[0] > ampli:
-    plt.ylim(0, ampli*1.2)
+    plt.ylim(0, ampli*1.6)
 plt.plot(xr, NillNorm, 'o', label = '[{}] Data up to {}'.format(country, head[-1]))
 tpeak = t0 - max(xr)
 plt.plot(xr2, flog(xr2, p[0], p[1], p[2], p[3]), '-',         
